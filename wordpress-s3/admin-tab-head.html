@@ -1,6 +1,7 @@
 <?php
-$dir = dirname(__FILE__);
-$pluginRootURL = get_option('siteurl').substr($dir, strpos($dir, '/wp-content'));
+$symlink = basename(dirname(dirname(__FILE__)));
+$dir = basename(dirname(__FILE__));
+$pluginRootURL = WP_CONTENT_URL.'/plugins/'.$symlink.'/'.$dir;
 if (!ereg('media-upload.php', $_SERVER['REQUEST_URI'])): // WP < 2.5
 ?>
 
