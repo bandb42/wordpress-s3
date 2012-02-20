@@ -17,12 +17,30 @@ class TanTanWordPressS3PluginPublic {
 	}
 	function wp_get_attachment_url($url, $postID) {
         if (!$this->options) $this->options = get_option('tantan_wordpress_s3');
-        
+
         if ($this->options['wp-uploads'] && ($amazon = get_post_meta($postID, 'amazonS3_info', true))) {
-            $accessDomain = $this->options['virtual-host'] ? $amazon['bucket'] : $amazon['bucket'].'.s3.amazonaws.com';
+            $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $amazon['bucket'] : $amazon['bucket'].'.s3.amazonaws.com';
             return 'http://'.$accessDomain.'/'.$amazon['key'];
         } else {
+            // we'll just go ahead and update the attachment
+            // so it's registered with Tan Tan correctly
+
+            $filePath = parse_url($url, PHP_URL_PATH);
+            $key = substr($filePath, 1);
+
+            $amazon = array(
+                'bucket' => $this->options['bucket'],
+                'key' => $key,
+            );
+            update_post_meta($postID, 'amazonS3_info', $amazon);
+
+            $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $amazon['bucket'] : $amazon['bucket'].'.s3.amazonaws.com';
+            return 'http://'.$accessDomain.'/'.$amazon['key'];
+
+            /*
+            // attachment is not uploaded to S3, fall back to local version
             return $url;
+            */
         }
     }
 }

@@ -149,7 +149,7 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
 			if (deleteObject($this->meta['bucket'], $this->meta['key'])) {
 				
 			}
-			$accessDomain = $this->options['virtual-host'] ? $this->meta['bucket'] : $this->meta['bucket'].'.s3.amazonaws.com';
+			$accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $this->meta['bucket'] : $this->meta['bucket'].'.s3.amazonaws.com';
 			return $file;
             //return 'http://'.$accessDomain.'/'.$amazon['key'];
             
@@ -319,7 +319,7 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
         //wp_enqueue_script('prototype');
         if (!$this->options) $this->options = get_option('tantan_wordpress_s3');
 
-        $accessDomain = $this->options['virtual-host'] ? $this->options['bucket'] : $this->options['bucket'].'.s3.amazonaws.com';
+        $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $this->options['bucket'] : $this->options['bucket'].'.s3.amazonaws.com';
         
         include(dirname(__FILE__).'/admin-tab-head.html');
     }
@@ -363,9 +363,9 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
             return;
         }
         $bucket = $this->options['bucket'];
-        $accessDomain = $this->options['virtual-host'] ? $this->options['bucket'] : $this->options['bucket'].'.s3.amazonaws.com';
+        $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $this->options['bucket'] : $this->options['bucket'].'.s3.amazonaws.com';
         
-        $prefix = $_GET['prefix'] ? $_GET['prefix'] : '';
+        $prefix = (isset($_GET['prefix']) and $_GET['prefix']) ? $_GET['prefix'] : '';
         list($prefixes, $keys, $meta, $privateKeys) = $this->getKeys($restrictPrefix.$prefix);
 		if ($restrictPrefix) {
 			foreach ($prefixes as $k=>$v) {
