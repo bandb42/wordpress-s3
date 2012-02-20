@@ -59,12 +59,12 @@ class TanTanHTTPRequestCurl {
             case 'DELETE':
                 curl_setopt($this->curl, CURLOPT_CUSTOMREQUEST, 'DELETE');
             break;
-            case HTTP_REQUEST_METHOD_PUT:
+            case 'HTTP_REQUEST_METHOD_PUT':
             case 'PUT':
                 curl_setopt($this->curl, CURLOPT_PUT, true);
                 //CURLOPT_INFILE CURLOPT_INFILESIZE
             break;
-            case HTTP_REQUEST_METHOD_POST:
+            case 'HTTP_REQUEST_METHOD_POST':
             case 'POST':
                 curl_setopt($this->curl, CURLOPT_POST, true);
             break;
@@ -196,7 +196,12 @@ class TanTanHTTPRequestCurl {
         $response_header_array = array();
         foreach($response_header_lines as $header_line) {
             list($header,$value) = explode(': ', $header_line, 2);
-            $response_header_array[$header] .= $value."\n";
+            if (isset($response_header_array[$header])) {
+                $response_header_array[$header] .= $value."\n";
+            }
+            else {
+                $response_header_array[$header] = $value."\n";
+            }
         }
         return array("code" => $response_code, "header" => $response_header_array, "body" => $response_body); 
     }
