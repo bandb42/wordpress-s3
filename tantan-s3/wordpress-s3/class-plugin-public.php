@@ -21,7 +21,7 @@ class TanTanWordPressS3PluginPublic {
         if ($this->options['wp-uploads'] && ($amazon = get_post_meta($postID, 'amazonS3_info', true))) {
             $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $amazon['bucket'] : $amazon['bucket'].'.s3.amazonaws.com';
             return 'http://'.$accessDomain.'/'.$amazon['key'];
-        } else {
+        } else if ($this->options['bucket']) {
             // we'll just go ahead and update the attachment
             // so it's registered with Tan Tan correctly
 
@@ -41,6 +41,9 @@ class TanTanWordPressS3PluginPublic {
             // attachment is not uploaded to S3, fall back to local version
             return $url;
             */
+        } else {
+            // plugin not configured
+            return $url;
         }
     }
 }
