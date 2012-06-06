@@ -54,9 +54,10 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
         parent::addhooks();
         if (!isset($_POST['disable_amazonS3']) or !$_POST['disable_amazonS3']) {
             add_filter('wp_update_attachment_metadata', array(&$this, 'wp_update_attachment_metadata'), 9, 2);
-            //can't delete mirrored files just yet
-            //add_filter('wp_get_attachment_metadata', array(&$this, 'wp_get_attachment_metadata'));
-            //add_filter('wp_delete_file', array(&$this, 'wp_delete_file'));
+            //add filters to delete mirrored files
+			add_filter('wp_get_attachment_metadata', array(&$this, 'wp_get_attachment_metadata'), 10, 2);
+			add_filter('wp_delete_file', array(&$this, 'wp_delete_file'));
+			add_action('delete_attachment', array(&$this, 'delete_attachment'));
         }
     }  
     function version_check() {
@@ -131,33 +132,38 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
     }
     
 
-    /*
-    Delete corresponding file from Amazon S3
-    */
-    function wp_delete_file($file) {
-        return $file;
+    //Delete the file(s) on S3
+    function delete_attachment($postid) {
         if (!$this->options) $this->options = get_option('tantan_wordpress_s3');
         
         if (!$this->options['wp-uploads'] || !$this->options['bucket'] || !$this->options['secret']) {
-            return $file;
+            return false;
         }
 
-        if (is_array($this->meta)) {
+		if (is_array($this->meta) && $this->meta["postID"]==$postid) {
             require_once(dirname(__FILE__).'/lib.s3.php');
             $this->s3 = new TanTanS3($this->options['key'], $this->options['secret']);
             $this->s3->setOptions($this->options);
-            if (deleteObject($this->meta['bucket'], $this->meta['key'])) {
-                
+			foreach ($this->meta['keys'] as $key) {
+				if ($this->s3->deleteObject($this->meta['bucket'], $key)) {
+
+				}
             }
-            $accessDomain = (isset($this->options['virtual-host']) and $this->options['virtual-host']) ? $this->meta['bucket'] : $this->meta['bucket'].'.s3.amazonaws.com';
-            return $file;
-            //return 'http://'.$accessDomain.'/'.$amazon['key'];
-            
-        }
+			return true;
+		} else {
+			error_log("delete_attachment(".$postid.") was called but we couldn't find the S3 metadata - ".$this->meta["postID"]);
+		}
+    }
+
+	function wp_delete_file($file) {
         return $file;
     }
+
     function wp_get_attachment_metadata($data=false, $postID=false) {
-        if (is_numeric($postID)) $this->meta = get_post_meta($postID, 'amazonS3_info', true);
+		if (is_numeric($postID)) {
+			$this->meta = get_post_meta($postID, 'amazonS3_info', true);
+			$this->meta["postID"] = $postID;
+		}
         return $data;
     }
     /*
@@ -199,6 +205,8 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
                     $thumbpath = str_replace( basename( $data['file'] ), $data['thumb'], $data['file'] );
                     $filethumb = array(
                         'name' => $data['thumb'],
+				$keys = array($prefix.$file['name']);
+			
                         'type' => $type,
                         'tmp_name' => $thumbpath,
                         'size' => filesize($thumbpath),
@@ -209,6 +217,12 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
                     $altPath = str_replace( basename( $data['file'] ), $altSize['file'], $data['file'] );
                     $altMeta = array(
                         'name' => $altSize['file'],
+			        
+			        //delete the local file
+			        unlink($thumbpath);
+			        
+			        $keys[] = $prefix.$filethumb['name'];
+			        
                         'type' => $type,
                         'tmp_name' => $altPath,
                         'size' => filesize($altPath),
@@ -219,10 +233,17 @@ class TanTanWordPressS3Plugin extends TanTanWordPressS3PluginPublic {
                 
                 
                 delete_post_meta($postID, 'amazonS3_info');
+			        //delete the local file
+			        unlink($altPath);
+			        
+			        $keys[] = $prefix.$altMeta['name'];
                 add_post_meta($postID, 'amazonS3_info', array(
                     'bucket' => $this->options['bucket'],
-                    'key' => $prefix.$file['name']
+                    'keys' => $keys
                     ));
+                    
+                //delete the local file
+                unlink($data['file']);
             } else {
                 
             }
